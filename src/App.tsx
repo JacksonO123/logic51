@@ -3,9 +3,38 @@ import Input from "@/components/input";
 import Button from "@/components/button";
 import { ChangeEvent } from "@/types/input";
 import Table from "@/components/table";
+import { Relation } from "./types/relations";
 
 const App = () => {
-  const [vars, setVars] = createSignal<string[]>(["a", "b"]);
+  const [vars, setVars] = createSignal<string[]>(["p", "q", "r", "s"]);
+  const [relations, setRelations] = createSignal<Relation[]>([
+    {
+      type: "or",
+      first: {
+        type: "and",
+        first: {
+          type: "or",
+          first: {
+            type: "var",
+            name: "p",
+          },
+          last: {
+            type: "var",
+            name: "q",
+          },
+        },
+        last: {
+          type: "var",
+          name: "r",
+        },
+      },
+      last: {
+        type: "var",
+        name: "s",
+      },
+    },
+  ]);
+  const [deconstructions, setDeconstructions] = createSignal<Relation[]>([]);
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal("");
 
@@ -15,17 +44,45 @@ const App = () => {
     setVarName(value);
   };
 
-  const fillTable = (vars: string[]) => {
-    const numCols = Math.pow(2, vars.length);
-    const table: boolean[][] = Array(vars.length)
+  const evaluateRelation = (
+    rel: Relation,
+    table: boolean[][],
+    row: number,
+  ): boolean => {
+    let first = false;
+    let last = false;
+
+    if (rel.first.type === "var") {
+      const varIndex = vars().indexOf(rel.first.name);
+      first = table[varIndex][row];
+    } else {
+      first = evaluateRelation(rel.first, table, row);
+    }
+
+    if (rel.last.type === "var") {
+      const varIndex = vars().indexOf(rel.last.name);
+      last = table[varIndex][row];
+    } else {
+      last = evaluateRelation(rel.last, table, row);
+    }
+
+    if (rel.type === "and") return first && last;
+    if (rel.type === "or") return first || last;
+
+    return false;
+  };
+
+  const fillTable = (vars: string[], ...relations: Relation[]) => {
+    const numRows = Math.pow(2, vars.length);
+    const table: boolean[][] = Array(vars.length + relations.length)
       .fill(null)
-      .map(() => Array(numCols).fill(false));
+      .map(() => Array(numRows).fill(false));
 
     let group = 1;
     for (let i = vars.length - 1; i >= 0; i--) {
       let j = 0;
 
-      while (j < numCols) {
+      while (j < numRows) {
         for (let k = 0; k < group; k++) {
           table[i][j + k] = true;
         }
@@ -36,13 +93,45 @@ const App = () => {
       group *= 2;
     }
 
+    for (let i = 0; i < numRows; i++) {
+      for (let j = 0; j < relations.length; j++) {
+        table[vars.length + j][i] = evaluateRelation(relations[j], table, i);
+      }
+    }
+
     setTable(table);
   };
 
-  createEffect(() => console.log(...table()));
+  const deconstruct = (relation: Relation) => {
+    const res: Relation[] = [];
+
+    if (relation.first.type !== "var") {
+      res.push(...deconstruct(relation.first), relation.first);
+    }
+
+    if (relation.last.type !== "var") {
+      res.push(...deconstruct(relation.last), relation.last);
+    }
+
+    return res;
+  };
+
+  const deconstructMany = (relations: Relation[]) => {
+    const res: Relation[] = [];
+
+    relations.forEach((rel) => {
+      res.push(...deconstruct(rel));
+    });
+
+    return res;
+  };
 
   createEffect(() => {
-    fillTable(vars());
+    fillTable(vars(), ...deconstructions(), ...relations());
+  });
+
+  createEffect(() => {
+    setDeconstructions(deconstructMany(relations()));
   });
 
   const addVariable = () => {
@@ -62,7 +151,11 @@ const App = () => {
         />
         <Button onClick={addVariable}>Add</Button>
       </div>
-      <Table table={table()} vars={vars()} />
+      <Table
+        table={table()}
+        vars={vars()}
+        relations={[...deconstructions(), ...relations()]}
+      />
     </main>
   );
 };
