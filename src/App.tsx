@@ -73,7 +73,7 @@ const App = () => {
   };
 
   const fillTable = (vars: string[], ...relations: Relation[]) => {
-    const numRows = Math.pow(2, vars.length);
+    const numRows = Math.pow(2, vars.length + relations.length);
     const table: boolean[][] = Array(vars.length + relations.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));

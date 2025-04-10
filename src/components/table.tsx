@@ -1,5 +1,4 @@
 import { Relation, RelationType, Variable } from "@/types/relations";
-import { ChevronDown, ChevronUp, Plus } from "lucide-solid";
 import { JSX } from "solid-js";
 import { twMerge } from "tailwind-merge";
 
@@ -93,17 +92,29 @@ type TableProps = {
 const Table = (props: TableProps) => {
   return (
     <div class="flex border border-primary w-fit rounded">
-      {props.table.map((col, colIndex) => (
+      {props.table.slice(0, props.vars.length).map((col, colIndex) => (
         <div class="flex flex-col">
           <ItemWrapper noBorderRight header>
-            {colIndex >= props.vars.length ? (
-              <RelationEl
-                rel={props.relations[colIndex - props.vars.length]}
-                root
-              />
-            ) : (
-              props.vars[colIndex]
-            )}
+            {props.vars[colIndex]}
+          </ItemWrapper>
+          {col.map((item, index) => (
+            <ItemWrapper
+              first={index === 0}
+              last={index === col.length - 1}
+              dimBorder
+              noBorderBottom
+              noBorderRight={colIndex === props.table.length - 1}
+              value={item}
+            >
+              {item ? "T" : "F"}
+            </ItemWrapper>
+          ))}
+        </div>
+      ))}
+      {props.table.slice(props.vars.length).map((col, colIndex) => (
+        <div class="flex flex-col">
+          <ItemWrapper noBorderRight header>
+            <RelationEl rel={props.relations[colIndex]} root />
           </ItemWrapper>
           {col.map((item, index) => (
             <ItemWrapper
