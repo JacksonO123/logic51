@@ -112,7 +112,6 @@ const Table = (props: TableProps) => {
     if (row != hovering()[1]) return false;
 
     const mapping = props.mappings[hovering()[0]];
-    console.log(mapping, col);
     return mapping.includes(col);
   };
 
