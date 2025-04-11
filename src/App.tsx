@@ -1,42 +1,46 @@
-import { createEffect, createSignal } from "solid-js";
-import Input from "@/components/input";
-import Button from "@/components/button";
-import { ChangeEvent } from "@/types/input";
-import Table from "@/components/table";
-import { Relation } from "./types/relations";
+import { createEffect, createSignal } from 'solid-js';
+import Input from '@/components/input';
+import Button from '@/components/button';
+import { ChangeEvent } from '@/types/input';
+import Table from '@/components/table';
+import { Relation } from './types/relations';
 
 const App = () => {
-  const [vars, setVars] = createSignal<string[]>(["p", "q", "r", "s"]);
+  const [vars, setVars] = createSignal<string[]>(['p', 'q', 'r', 's']);
   const [relations, setRelations] = createSignal<Relation[]>([
     {
-      type: "or",
+      related: ['s'],
+      type: 'or',
       first: {
-        type: "and",
+        related: ['r'],
+        type: 'and',
         first: {
-          type: "or",
+          related: ['p', 'q'],
+          type: 'or',
           first: {
-            type: "var",
-            name: "p",
+            type: 'var',
+            name: 'p'
           },
           last: {
-            type: "var",
-            name: "q",
-          },
+            type: 'var',
+            name: 'q'
+          }
         },
         last: {
-          type: "var",
-          name: "r",
-        },
+          type: 'var',
+          name: 'r'
+        }
       },
       last: {
-        type: "var",
-        name: "s",
-      },
-    },
+        type: 'var',
+        name: 's'
+      }
+    }
   ]);
+  const [relationMappings, setRelationMappings] = createSignal<number[][]>([]);
   const [deconstructions, setDeconstructions] = createSignal<Relation[]>([]);
   const [table, setTable] = createSignal<boolean[][]>([]);
-  const [varName, setVarName] = createSignal("");
+  const [varName, setVarName] = createSignal('');
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.currentTarget.value.slice(0, 1);
@@ -44,30 +48,26 @@ const App = () => {
     setVarName(value);
   };
 
-  const evaluateRelation = (
-    rel: Relation,
-    table: boolean[][],
-    row: number,
-  ): boolean => {
+  const evaluateRelation = (rel: Relation, table: boolean[][], row: number): boolean => {
     let first = false;
     let last = false;
 
-    if (rel.first.type === "var") {
+    if (rel.first.type === 'var') {
       const varIndex = vars().indexOf(rel.first.name);
       first = table[varIndex][row];
     } else {
       first = evaluateRelation(rel.first, table, row);
     }
 
-    if (rel.last.type === "var") {
+    if (rel.last.type === 'var') {
       const varIndex = vars().indexOf(rel.last.name);
       last = table[varIndex][row];
     } else {
       last = evaluateRelation(rel.last, table, row);
     }
 
-    if (rel.type === "and") return first && last;
-    if (rel.type === "or") return first || last;
+    if (rel.type === 'and') return first && last;
+    if (rel.type === 'or') return first || last;
 
     return false;
   };
@@ -102,26 +102,36 @@ const App = () => {
     setTable(table);
   };
 
-  const deconstruct = (relation: Relation) => {
+  const deconstruct = (relation: Relation, mappings: number[][]) => {
     const res: Relation[] = [];
+    const related: number[] = [];
 
-    if (relation.first.type !== "var") {
-      res.push(...deconstruct(relation.first), relation.first);
+    if (relation.first.type !== 'var') {
+      const deconstructions = deconstruct(relation.first, mappings);
+      related.push(mappings.length - 1);
+      res.push(...deconstructions, relation.first);
     }
 
-    if (relation.last.type !== "var") {
-      res.push(...deconstruct(relation.last), relation.last);
+    if (relation.last.type !== 'var') {
+      const deconstructions = deconstruct(relation.last, mappings);
+      related.push(mappings.length - 1);
+      res.push(...deconstructions, relation.last);
     }
+
+    mappings.push(related);
 
     return res;
   };
 
   const deconstructMany = (relations: Relation[]) => {
     const res: Relation[] = [];
+    const mappings: number[][] = [];
 
     relations.forEach((rel) => {
-      res.push(...deconstruct(rel));
+      res.push(...deconstruct(rel, mappings));
     });
+
+    setRelationMappings(mappings);
 
     return res;
   };
@@ -137,7 +147,7 @@ const App = () => {
   const addVariable = () => {
     if (varName().length === 0) return;
     setVars([...vars(), varName()]);
-    setVarName("");
+    setVarName('');
   };
 
   return (
@@ -155,6 +165,7 @@ const App = () => {
         table={table()}
         vars={vars()}
         relations={[...deconstructions(), ...relations()]}
+        mappings={relationMappings()}
       />
     </main>
   );
