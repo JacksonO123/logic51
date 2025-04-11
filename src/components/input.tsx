@@ -2,7 +2,7 @@ import { JSX, splitProps } from 'solid-js';
 import { cn } from '@/lib/utils';
 
 const Input = (props: JSX.InputHTMLAttributes<HTMLInputElement>) => {
-  const [local, others] = splitProps(props, ['class']);
+  const [local, others] = splitProps(props, ['class', 'disabled']);
 
   return (
     <input
