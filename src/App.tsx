@@ -3,44 +3,60 @@ import Input from '@/components/input';
 import Button from '@/components/button';
 import { ChangeEvent } from '@/types/input';
 import Table from '@/components/table';
-import { Relation } from './types/relations';
+import { Relation, Variable } from './types/relations';
+import { logic } from './lib/utils';
+import CreateExpression from './components/create-expression';
 
 const App = () => {
   const [vars, setVars] = createSignal<string[]>(['p', 'q', 'r', 's']);
   const [relations, setRelations] = createSignal<Relation[]>([
     {
-      related: ['s'],
-      type: 'or',
+      relatedVars: ['q'],
+      relatedIds: [],
+      type: 'if',
       first: {
-        related: ['r'],
-        type: 'and',
+        relatedVars: ['s'],
+        relatedIds: [],
+        type: 'or',
         first: {
-          related: ['p', 'q'],
-          type: 'or',
+          relatedVars: ['r'],
+          relatedIds: [],
+          type: 'and',
           first: {
-            type: 'var',
-            name: 'p'
+            relatedVars: ['p', 'q'],
+            relatedIds: [],
+            type: 'or',
+            first: {
+              type: 'var',
+              name: 'p'
+            },
+            last: {
+              type: 'var',
+              name: 'q'
+            }
           },
           last: {
             type: 'var',
-            name: 'q'
+            name: 'r'
           }
         },
-        last: {
-          type: 'var',
-          name: 'r'
-        }
+        last: { type: 'var', name: 's' }
       },
       last: {
         type: 'var',
-        name: 's'
+        name: 'q'
       }
     }
   ]);
-  const [relationMappings, setRelationMappings] = createSignal<number[][]>([]);
-  const [deconstructions, setDeconstructions] = createSignal<Relation[]>([]);
+  const [deconstructions, setDeconstructions] = createSignal<Record<number, Relation>>({});
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal('');
+  const allRelations = () =>
+    Object.entries(deconstructions())
+      .sort((a, b) => +a[0] - +b[0])
+      .map((item) => item[1])
+      .concat(...relations());
+  let deconId = 0;
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.currentTarget.value.slice(0, 1);
@@ -66,14 +82,11 @@ const App = () => {
       last = evaluateRelation(rel.last, table, row);
     }
 
-    if (rel.type === 'and') return first && last;
-    if (rel.type === 'or') return first || last;
-
-    return false;
+    return logic[rel.type](first, last);
   };
 
-  const fillTable = (vars: string[], ...relations: Relation[]) => {
-    const numRows = Math.pow(2, vars.length);
+  const fillTable = (vars: string[], relations: Relation[]) => {
+    const numRows = Math.pow(2, Object.keys(deconstructions).length + vars.length);
     const table: boolean[][] = Array(vars.length + relations.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));
@@ -102,52 +115,82 @@ const App = () => {
     setTable(table);
   };
 
-  const deconstruct = (relation: Relation, mappings: number[][]) => {
-    const res: Relation[] = [];
-    const related: number[] = [];
+  const relationsEqual = (rel1: Relation | Variable, rel2: Relation | Variable): boolean => {
+    if (rel1.type !== rel2.type) return false;
+    if (rel1.type === 'var' || rel2.type === 'var') {
+      if ((rel1 as Variable).name !== (rel2 as Variable).name) return false;
+      return true;
+    }
+
+    if (rel1.relatedVars.length !== rel2.relatedVars.length) return false;
+    return relationsEqual(rel1.first, rel2.first) && relationsEqual(rel1.last, rel2.last);
+  };
+
+  const isUnique = (relations: Relation[], rel: Relation) => {
+    for (let i = 0; i < relations.length; i++) {
+      if (relationsEqual(relations[i], rel)) return false;
+    }
+
+    return true;
+  };
+
+  const deconstruct = (decons: Record<number, Relation>, relation: Relation) => {
+    relation.relatedIds = [];
 
     if (relation.first.type !== 'var') {
-      const deconstructions = deconstruct(relation.first, mappings);
-      related.push(mappings.length - 1);
-      res.push(...deconstructions, relation.first);
+      deconstruct(decons, relation.first);
+
+      const shallowCopy = { ...relation.first };
+      shallowCopy.deconId = deconId;
+
+      if (isUnique(Object.values(decons), shallowCopy)) {
+        decons[deconId] = shallowCopy;
+      }
+
+      relation.relatedIds.push(deconId);
+      deconId++;
     }
 
     if (relation.last.type !== 'var') {
-      const deconstructions = deconstruct(relation.last, mappings);
-      related.push(mappings.length - 1);
-      res.push(...deconstructions, relation.last);
+      deconstruct(decons, relation.last);
+
+      const shallowCopy = { ...relation.last };
+      shallowCopy.deconId = deconId;
+
+      if (isUnique(Object.values(decons), shallowCopy)) {
+        decons[deconId] = shallowCopy;
+      }
+
+      relation.relatedIds.push(deconId);
+      deconId++;
     }
-
-    mappings.push(related);
-
-    return res;
   };
 
   const deconstructMany = (relations: Relation[]) => {
-    const res: Relation[] = [];
-    const mappings: number[][] = [];
+    const res: Record<number, Relation> = {};
 
     relations.forEach((rel) => {
-      res.push(...deconstruct(rel, mappings));
+      deconstruct(res, rel);
     });
-
-    setRelationMappings(mappings);
 
     return res;
   };
 
   createEffect(() => {
-    fillTable(vars(), ...deconstructions(), ...relations());
-  });
+    deconId = 0;
 
-  createEffect(() => {
     setDeconstructions(deconstructMany(relations()));
+    fillTable(vars(), allRelations());
   });
 
   const addVariable = () => {
     if (varName().length === 0) return;
     setVars([...vars(), varName()]);
     setVarName('');
+  };
+
+  const handleSubmit = (rel: Relation) => {
+    setRelations((prev) => [...prev, rel]);
   };
 
   return (
@@ -164,8 +207,11 @@ const App = () => {
       <Table
         table={table()}
         vars={vars()}
-        relations={[...deconstructions(), ...relations()]}
-        mappings={relationMappings()}
+        relations={allRelations()}
+      />
+      <CreateExpression
+        vars={vars()}
+        onSubmit={handleSubmit}
       />
     </main>
   );

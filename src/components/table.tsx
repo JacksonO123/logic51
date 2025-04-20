@@ -1,4 +1,5 @@
 import { Relation, RelationType, Variable } from '@/types/relations';
+import { MoveRight } from 'lucide-solid';
 import { createSignal, JSX } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 
@@ -69,7 +70,8 @@ type RelationElProps = {
 const RelationEl = (props: RelationElProps) => {
   const icons: Record<RelationType, JSX.Element> = {
     and: <And />,
-    or: <Or />
+    or: <Or />,
+    if: <MoveRight class="mx-2" />
   };
 
   if (props.rel.type === 'var') {
@@ -89,7 +91,6 @@ type TableProps = {
   table: boolean[][];
   vars: string[];
   relations: Relation[];
-  mappings: number[][];
 };
 
 const Table = (props: TableProps) => {
@@ -104,15 +105,20 @@ const Table = (props: TableProps) => {
   const isRelated = (col: number, row: number) => {
     if (row != hovering()[1]) return false;
 
-    const related = props.relations[hovering()[0]].related;
+    const related = props.relations[hovering()[0]].relatedVars;
     return related.includes(props.vars[col]);
   };
 
   const isMapped = (col: number, row: number) => {
     if (row != hovering()[1]) return false;
 
-    const mapping = props.mappings[hovering()[0]];
-    return mapping.includes(col);
+    const rel = props.relations[col];
+    if (rel.deconId === undefined) return false;
+
+    const relatedIds = props.relations[hovering()[0]].relatedIds;
+    if (relatedIds.includes(rel.deconId)) return true;
+
+    return false;
   };
 
   return (
