@@ -48,20 +48,15 @@ const App = () => {
       }
     }
   ]);
-  const [conclusion, setConclusion] = createSignal<Relation | null>(null);
+  const [hasConclusion, setHasConclusion] = createSignal(false);
   const [deconstructions, setDeconstructions] = createSignal<Record<number, Relation>>({});
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal('');
-  const allRelations = () => {
-    const res = Object.entries(deconstructions())
+  const allRelations = () =>
+    Object.entries(deconstructions())
       .sort((a, b) => +a[0] - +b[0])
       .map((item) => item[1])
       .concat(...relations());
-
-    const con = conclusion();
-    if (con !== null) return res.concat(con);
-    return res;
-  };
   let deconId = 0;
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +87,7 @@ const App = () => {
   };
 
   const fillTable = (vars: string[], relations: Relation[]) => {
-    const numRows = Math.pow(2, allRelations().length + vars.length);
+    const numRows = Math.pow(2, relations.length + vars.length);
     const table: boolean[][] = Array(vars.length + relations.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));
@@ -195,9 +190,27 @@ const App = () => {
     setVarName('');
   };
 
-  const handleSubmit = (rel: Relation, isConclusion: boolean) => {
-    if (isConclusion) setConclusion(rel);
-    else setRelations((prev) => [...prev, rel]);
+  const handleSubmit = (rel: Relation, conclusion: boolean) => {
+    const prevHasConclusion = hasConclusion();
+    if (conclusion) setHasConclusion(conclusion);
+
+    if (!prevHasConclusion) {
+      setRelations((prev) => [...prev, rel]);
+      return;
+    }
+
+    if (conclusion) {
+      setRelations((prev) => {
+        prev[prev.length - 1] = rel;
+        return [...prev];
+      });
+    } else {
+      setRelations((prev) => {
+        const last = prev.splice(prev.length - 1)[0];
+        prev.push(rel, last);
+        return [...prev];
+      });
+    }
   };
 
   return (
@@ -216,7 +229,7 @@ const App = () => {
         vars={vars()}
         relations={allRelations()}
         numDefined={relations().length}
-        hasConclusion={conclusion() !== null}
+        hasConclusion={hasConclusion()}
       />
       <CreateExpression
         vars={vars()}

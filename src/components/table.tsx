@@ -167,7 +167,7 @@ const Table = (props: TableProps) => {
           >
             <RelationEl
               rel={props.relations[colIndex]}
-              defined={relations().length - colIndex <= props.numDefined + (props.hasConclusion ? 1 : 0)}
+              defined={relations().length - colIndex <= props.numDefined}
               conclusion={props.hasConclusion && colIndex === relations().length - 1}
               root
             />
@@ -178,7 +178,7 @@ const Table = (props: TableProps) => {
               last={index === col.length - 1}
               dimBorder
               noBorderBottom
-              noBorderRight={colIndex === props.table.length - 1}
+              noBorderRight={colIndex === relations().length - 1}
               value={item}
               onMouseOver={() => handleHover(colIndex, index)}
               onMouseLeave={cancelHover}
