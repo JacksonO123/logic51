@@ -1,3 +1,4 @@
+import { ElementDropEvent } from '@/types/events';
 import { JSX, splitProps } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 
@@ -33,9 +34,14 @@ type LogicWrapperProps = JSX.HTMLAttributes<HTMLDivElement>;
 export const LogicWrapper = (props: LogicWrapperProps) => {
   const [local, other] = splitProps(props, ['class']);
 
+  const handleDrop = (e: ElementDropEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+  };
+
   return (
     <ItemWrapper
       class={twMerge('bg-green-600 px-2 flex gap-2 w-fit cursor-grab', local.class)}
+      onDrop={handleDrop}
       {...other}
     />
   );
