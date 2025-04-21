@@ -1,11 +1,11 @@
 import { ElementDragEvent, ElementDropEvent } from '@/types/events';
 import { CreatingRelation, PathType, Variable } from '@/types/relations';
-import { JSX, Show, splitProps } from 'solid-js';
+import { createSignal, JSX, splitProps } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
 import { dragging, getDraggingControls } from '@/contexts/dragging';
 
-type DragTargetProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'children'> & {
+type DragTargetProps = JSX.HTMLAttributes<HTMLDivElement> & {
   onAreaDrop: (path: PathType[], data: CreatingRelation | Variable) => void;
   registerClearPath: (path: PathType[]) => void;
   root?: boolean;
@@ -13,11 +13,13 @@ type DragTargetProps = Omit<JSX.HTMLAttributes<HTMLDivElement>, 'children'> & {
 };
 
 const DragTarget = (props: DragTargetProps) => {
-  const [local, other] = splitProps(props, ['class', 'onDragEnter', 'onDragLeave']);
+  const [local, other] = splitProps(props, ['class', 'onDragEnter', 'onDragLeave', 'children']);
+  const [draggingOver, setDraggingOver] = createSignal(false);
 
   const handleDrop = (e: ElementDropEvent<HTMLDivElement>) => {
     e.stopPropagation();
     e.preventDefault();
+    setDraggingOver(false);
 
     if (!e.dataTransfer) return;
 
@@ -34,16 +36,23 @@ const DragTarget = (props: DragTargetProps) => {
     if (!props.root) props.registerClearPath([]);
   };
 
+  const handleDragEnter = () => setDraggingOver(true);
+
+  const handleDragLeave = () => setDraggingOver(false);
+
   return (
     <div
       class={twMerge(
         'border-2 border-dashed duration-150 border-black/20',
         props.root && 'border-zinc-300 bg-background',
         dragging() && (props.root ? 'border-primary' : 'border-white'),
+        draggingOver() && 'bg-white/50',
         local.class
       )}
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
       {...other}
     >
       {props.data && (
@@ -81,6 +90,7 @@ const DragTarget = (props: DragTargetProps) => {
           )}
         </>
       )}
+      {local.children}
     </div>
   );
 };

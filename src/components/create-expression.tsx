@@ -1,6 +1,6 @@
-import { createSignal } from 'solid-js';
+import { JSX, createSignal, splitProps } from 'solid-js';
 import Button from './button';
-import { Minus, Plus } from 'lucide-solid';
+import { Check, Minus, Plus, X } from 'lucide-solid';
 import {
   CreatingRelation,
   DraggableType,
@@ -10,20 +10,47 @@ import {
   RelationType,
   Variable
 } from '@/types/relations';
-import { ElementDragEvent, ElementDropEvent } from '@/types/events';
+import { ElementDragEvent, ElementDropEvent, ElementInputEvent } from '@/types/events';
 import DragTarget from './drag-target';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
 import DropArea from './drop-area';
 import { getDraggingControls } from '@/contexts/dragging';
+import { twMerge } from 'tailwind-merge';
+import ExpandWidth from './expand-width';
+
+const ClearButton = (props: Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'children'>) => {
+  const [local, other] = splitProps(props, ['class', 'onMouseEnter', 'onMouseLeave']);
+  const [hovering, setHovering] = createSignal(false);
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      class={twMerge(
+        'absolute left-0 top-0 translate-x-[-6px] translate-y-[-50%] h-6 p-1 px-0 has-[>svg]:px-1 rounded-full gap-0 overflow-hidden',
+        local.class
+      )}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      {...other}
+    >
+      <X />
+      <ExpandWidth expanded={hovering()}>
+        <span class="text-sm">Clear</span>
+      </ExpandWidth>
+    </Button>
+  );
+};
 
 type CreateExpressionProps = {
   vars: string[];
-  onSubmit: (rel: Relation) => void;
+  onSubmit: (rel: Relation, isConclusion: boolean) => void;
 };
 
 const CreateExpression = (props: CreateExpressionProps) => {
   const [showing, setShowing] = createSignal(false);
   const [relation, setRelation] = createSignal<CreatingRelation | null>(null);
+  const [isConclusion, setIsConclusion] = createSignal(false);
   let dropEvent: (() => void) | null = null;
 
   const setDragging = (e: ElementDragEvent<HTMLDivElement>, blockType: DraggableType) => {
@@ -126,6 +153,11 @@ const CreateExpression = (props: CreateExpressionProps) => {
     return scanExpr(rel);
   };
 
+  const updateIsConclusion = (e: ElementInputEvent<HTMLInputElement>) => {
+    const value = e.currentTarget.checked;
+    setIsConclusion(value);
+  };
+
   const propagateRelatedVars = (rel: Relation) => {
     if (rel.first.type === 'var') {
       rel.relatedVars = [rel.first.name];
@@ -144,7 +176,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
     const rel = relation() as Relation;
     if (!rel) return;
     propagateRelatedVars(rel);
-    props.onSubmit(rel);
+    props.onSubmit(rel, isConclusion());
     setRelation(null);
     setShowing(false);
   };
@@ -181,12 +213,30 @@ const CreateExpression = (props: CreateExpressionProps) => {
               ))}
             </div>
             <DragTarget
-              class="w-full min-h-[35px] p-2 rounded-md"
+              class="w-full min-h-[35px] p-3 rounded-md relative"
               onAreaDrop={handleDrop}
               registerClearPath={registerClearPath}
               data={relation()}
               root
-            />
+            >
+              <ClearButton onClick={() => setRelation(null)} />
+            </DragTarget>
+            <div class="w-full flex justify-start px-1 gap-2 items-center">
+              <button
+                class={twMerge(
+                  'w-4 h-4 border flex justify-center items-center rounded border-black cursor-pointer duration-150',
+                  isConclusion() ? 'bg-black border-black' : 'bg-background'
+                )}
+                onClick={() => setIsConclusion((prev) => !prev)}
+              >
+                <Check
+                  size={12}
+                  strokeWidth={4}
+                  stroke="white"
+                />
+              </button>
+              <label for="conclusion">Is conclusion</label>
+            </div>
             <Button
               onClick={createExpression}
               class="w-fit"

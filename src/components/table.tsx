@@ -1,6 +1,6 @@
 import { Relation, RelationType, Variable } from '@/types/relations';
 import { MoveRight } from 'lucide-solid';
-import { createSignal, JSX } from 'solid-js';
+import { createMemo, createSignal, JSX } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 
 type ItemWrapperProps = {
@@ -26,7 +26,7 @@ const ItemWrapper = (props: ItemWrapperProps) => {
         !props.noBorderRight && `border-r ${props.dimBorder ? 'border-r-primary/25' : 'border-r-primary'}`,
         props.first && 'pt-1',
         props.last && 'pb-1',
-        props.header ? 'h-12' : 'hover:[&_div]:border-black'
+        props.header ? 'h-14' : 'hover:[&_div]:border-black'
       )}
       onMouseOver={props.onMouseOver}
       onMouseLeave={props.onMouseLeave}
@@ -64,6 +64,8 @@ const Or = () => {
 
 type RelationElProps = {
   rel: Relation | Variable;
+  defined?: boolean;
+  conclusion?: boolean;
   root?: boolean;
 };
 
@@ -75,11 +77,17 @@ const RelationEl = (props: RelationElProps) => {
   };
 
   if (props.rel.type === 'var') {
-    return <span class="leading-0">{props.rel.name}</span>;
+    return <span class="leading-0 px-2">{props.rel.name}</span>;
   }
 
   return (
-    <div class={twMerge('flex items-center rounded p-1', !props.root && 'border border-primary my-[-1px]')}>
+    <div
+      class={twMerge(
+        'flex items-center rounded p-1',
+        !props.root && 'border border-primary my-[-1px]',
+        props.conclusion ? 'bg-red-200' : props.defined && 'bg-blue-200/60'
+      )}
+    >
       <RelationEl rel={props.rel.first} />
       {icons[props.rel.type]}
       <RelationEl rel={props.rel.last} />
@@ -91,10 +99,13 @@ type TableProps = {
   table: boolean[][];
   vars: string[];
   relations: Relation[];
+  numDefined: number;
+  hasConclusion: boolean;
 };
 
 const Table = (props: TableProps) => {
   const [hovering, setHovering] = createSignal<[number, number]>([-1, -1]);
+  const relations = createMemo(() => props.table.slice(props.vars.length));
 
   const handleHover = (col: number, row: number) => {
     setHovering([col, row]);
@@ -148,7 +159,7 @@ const Table = (props: TableProps) => {
           ))}
         </div>
       ))}
-      {props.table.slice(props.vars.length).map((col, colIndex) => (
+      {relations().map((col, colIndex) => (
         <div class="flex flex-col">
           <ItemWrapper
             noBorderRight
@@ -156,6 +167,8 @@ const Table = (props: TableProps) => {
           >
             <RelationEl
               rel={props.relations[colIndex]}
+              defined={relations().length - colIndex <= props.numDefined + (props.hasConclusion ? 1 : 0)}
+              conclusion={props.hasConclusion && colIndex === relations().length - 1}
               root
             />
           </ItemWrapper>

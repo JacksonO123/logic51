@@ -48,14 +48,20 @@ const App = () => {
       }
     }
   ]);
+  const [conclusion, setConclusion] = createSignal<Relation | null>(null);
   const [deconstructions, setDeconstructions] = createSignal<Record<number, Relation>>({});
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal('');
-  const allRelations = () =>
-    Object.entries(deconstructions())
+  const allRelations = () => {
+    const res = Object.entries(deconstructions())
       .sort((a, b) => +a[0] - +b[0])
       .map((item) => item[1])
       .concat(...relations());
+
+    const con = conclusion();
+    if (con !== null) return res.concat(con);
+    return res;
+  };
   let deconId = 0;
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +92,7 @@ const App = () => {
   };
 
   const fillTable = (vars: string[], relations: Relation[]) => {
-    const numRows = Math.pow(2, Object.keys(deconstructions).length + vars.length);
+    const numRows = Math.pow(2, allRelations().length + vars.length);
     const table: boolean[][] = Array(vars.length + relations.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));
@@ -189,8 +195,9 @@ const App = () => {
     setVarName('');
   };
 
-  const handleSubmit = (rel: Relation) => {
-    setRelations((prev) => [...prev, rel]);
+  const handleSubmit = (rel: Relation, isConclusion: boolean) => {
+    if (isConclusion) setConclusion(rel);
+    else setRelations((prev) => [...prev, rel]);
   };
 
   return (
@@ -208,6 +215,8 @@ const App = () => {
         table={table()}
         vars={vars()}
         relations={allRelations()}
+        numDefined={relations().length}
+        hasConclusion={conclusion() !== null}
       />
       <CreateExpression
         vars={vars()}

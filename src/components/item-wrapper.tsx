@@ -35,7 +35,7 @@ export const LogicWrapper = (props: LogicWrapperProps) => {
 
   return (
     <ItemWrapper
-      class={twMerge('bg-green-600 px-2 flex gap-2 w-fit', local.class)}
+      class={twMerge('bg-green-600 px-2 flex gap-2 w-fit cursor-grab', local.class)}
       {...other}
     />
   );
