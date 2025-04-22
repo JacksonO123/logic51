@@ -2,15 +2,15 @@ import { JSX, createSignal, splitProps } from 'solid-js';
 import Button from './button';
 import { Check, Minus, Plus, X } from 'lucide-solid';
 import {
-  CreatingRelation,
   DraggableType,
   PathType,
   Relation,
   relations,
   RelationType,
+  singleSlotRelations,
   Variable
 } from '@/types/relations';
-import { ElementDragEvent, ElementDropEvent, ElementInputEvent } from '@/types/events';
+import { ElementDragEvent, ElementDropEvent } from '@/types/events';
 import DragTarget from './drag-target';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
 import DropArea from './drop-area';
@@ -49,14 +49,14 @@ type CreateExpressionProps = {
 
 const CreateExpression = (props: CreateExpressionProps) => {
   const [showing, setShowing] = createSignal(false);
-  const [relation, setRelation] = createSignal<CreatingRelation | null>(null);
+  const [relation, setRelation] = createSignal<Relation | null>(null);
   const [isConclusion, setIsConclusion] = createSignal(false);
   let dropEvent: (() => void) | null = null;
 
   const setDragging = (e: ElementDragEvent<HTMLDivElement>, blockType: DraggableType) => {
     if (!e.dataTransfer) return;
 
-    let data: CreatingRelation | Variable;
+    let data: Relation | Variable;
 
     if (blockType.startsWith('var')) {
       const name = blockType.split('-')[1];
@@ -76,7 +76,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
     e.dataTransfer.setData('text', str);
   };
 
-  const handleDrop = (path: PathType[], data: CreatingRelation | Variable | null) => {
+  const handleDrop = (path: PathType[], data: Relation | Variable | null) => {
     const event = dropEvent;
     dropEvent = null;
     event?.();
@@ -100,7 +100,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
     const orig = obj;
 
     for (const part of path) {
-      obj = obj[part] as CreatingRelation;
+      obj = obj[part] as Relation;
     }
 
     if (!data) {
@@ -129,8 +129,8 @@ const CreateExpression = (props: CreateExpressionProps) => {
   const surround = (e: ElementDropEvent<HTMLDivElement>, pos: PathType, blockType: RelationType) => {
     if (!e.dataTransfer) return;
 
-    const obj = JSON.parse(e.dataTransfer.getData('text')) as CreatingRelation | Variable;
-    const res: CreatingRelation = {
+    const obj = JSON.parse(e.dataTransfer.getData('text')) as Relation | Variable;
+    const res: Relation = {
       relatedVars: [],
       relatedIds: [],
       type: blockType,
@@ -139,12 +139,15 @@ const CreateExpression = (props: CreateExpressionProps) => {
     setRelation(res);
   };
 
-  const scanExpr = (rel: CreatingRelation | Variable): boolean => {
+  const scanExpr = (rel: Relation | Variable): boolean => {
+    const isSingleSlot = singleSlotRelations.includes(rel.type);
+
     if (rel.type === 'var') return true;
-    if (!rel.first) return false;
+    if (!isSingleSlot && !rel.first) return false;
     if (!rel.last) return false;
 
-    return scanExpr(rel.first) && scanExpr(rel.last);
+    const first = isSingleSlot ? true : scanExpr(rel.first!);
+    return first && scanExpr(rel.last);
   };
 
   const ableToCreate = () => {
@@ -153,22 +156,17 @@ const CreateExpression = (props: CreateExpressionProps) => {
     return scanExpr(rel);
   };
 
-  const updateIsConclusion = (e: ElementInputEvent<HTMLInputElement>) => {
-    const value = e.currentTarget.checked;
-    setIsConclusion(value);
-  };
-
   const propagateRelatedVars = (rel: Relation) => {
-    if (rel.first.type === 'var') {
+    if (rel.first?.type === 'var') {
       rel.relatedVars = [rel.first.name];
     } else {
-      propagateRelatedVars(rel.first);
+      if (rel.first) propagateRelatedVars(rel.first);
     }
 
-    if (rel.last.type === 'var') {
+    if (rel.last?.type === 'var') {
       rel.relatedVars.push(rel.last.name);
     } else {
-      propagateRelatedVars(rel.last);
+      if (rel.last) propagateRelatedVars(rel.last);
     }
   };
 
@@ -206,7 +204,9 @@ const CreateExpression = (props: CreateExpressionProps) => {
                     onDragStart: (e) => setDragging(e, rel)
                   })}
                 >
-                  <DropArea onDrop={(e) => surround(e, 'first', rel)} />
+                  {!singleSlotRelations.includes(rel) && (
+                    <DropArea onDrop={(e) => surround(e, 'first', rel)} />
+                  )}
                   {rel}
                   <DropArea onDrop={(e) => surround(e, 'last', rel)} />
                 </LogicWrapper>

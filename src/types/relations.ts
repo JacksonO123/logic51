@@ -1,4 +1,5 @@
-export const relations = ['and', 'or', 'if'] as const;
+export const relations = ['and', 'or', 'if', 'iff', 'not'] as const;
+export const singleSlotRelations = ['not'];
 
 export type RelationType = (typeof relations)[number];
 
@@ -18,11 +19,6 @@ export type Relation = {
   relatedIds: number[];
   deconId?: number;
   type: RelationType;
-  first: Relation | Variable;
-  last: Relation | Variable;
-};
-
-export type CreatingRelation = Omit<Relation, 'first' | 'last'> & {
-  first?: CreatingRelation | Variable;
-  last?: CreatingRelation | Variable;
+  first?: Relation | Variable;
+  last?: Relation | Variable;
 };

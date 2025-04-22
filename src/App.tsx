@@ -69,17 +69,17 @@ const App = () => {
     let first = false;
     let last = false;
 
-    if (rel.first.type === 'var') {
+    if (rel.first?.type === 'var') {
       const varIndex = vars().indexOf(rel.first.name);
       first = table[varIndex][row];
-    } else {
+    } else if (rel.first) {
       first = evaluateRelation(rel.first, table, row);
     }
 
-    if (rel.last.type === 'var') {
+    if (rel.last?.type === 'var') {
       const varIndex = vars().indexOf(rel.last.name);
       last = table[varIndex][row];
-    } else {
+    } else if (rel.last) {
       last = evaluateRelation(rel.last, table, row);
     }
 
@@ -87,8 +87,8 @@ const App = () => {
   };
 
   const fillTable = (vars: string[], relations: Relation[]) => {
-    const numRows = Math.pow(2, relations.length + vars.length);
-    const table: boolean[][] = Array(vars.length + relations.length)
+    const numRows = Math.pow(2, vars.length);
+    const table: boolean[][] = Array(relations.length + vars.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));
 
@@ -116,7 +116,10 @@ const App = () => {
     setTable(table);
   };
 
-  const relationsEqual = (rel1: Relation | Variable, rel2: Relation | Variable): boolean => {
+  const relationsEqual = (rel1?: Relation | Variable, rel2?: Relation | Variable): boolean => {
+    if (rel1 === undefined && rel2 === undefined) return true;
+    if (!rel1 || !rel2) return false;
+
     if (rel1.type !== rel2.type) return false;
     if (rel1.type === 'var' || rel2.type === 'var') {
       if ((rel1 as Variable).name !== (rel2 as Variable).name) return false;
@@ -138,7 +141,7 @@ const App = () => {
   const deconstruct = (decons: Record<number, Relation>, relation: Relation) => {
     relation.relatedIds = [];
 
-    if (relation.first.type !== 'var') {
+    if (relation.first && relation.first.type !== 'var') {
       deconstruct(decons, relation.first);
 
       const shallowCopy = { ...relation.first };
@@ -152,7 +155,7 @@ const App = () => {
       deconId++;
     }
 
-    if (relation.last.type !== 'var') {
+    if (relation.last && relation.last.type !== 'var') {
       deconstruct(decons, relation.last);
 
       const shallowCopy = { ...relation.last };

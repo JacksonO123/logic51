@@ -1,15 +1,15 @@
 import { ElementDragEvent, ElementDropEvent } from '@/types/events';
-import { CreatingRelation, PathType, Variable } from '@/types/relations';
+import { Relation, PathType, singleSlotRelations, Variable } from '@/types/relations';
 import { createSignal, JSX, splitProps } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
 import { dragging, getDraggingControls } from '@/contexts/dragging';
 
 type DragTargetProps = JSX.HTMLAttributes<HTMLDivElement> & {
-  onAreaDrop: (path: PathType[], data: CreatingRelation | Variable) => void;
+  onAreaDrop: (path: PathType[], data: Relation | Variable) => void;
   registerClearPath: (path: PathType[]) => void;
   root?: boolean;
-  data: CreatingRelation | Variable | null;
+  data: Relation | Variable | null;
 };
 
 const DragTarget = (props: DragTargetProps) => {
@@ -24,7 +24,7 @@ const DragTarget = (props: DragTargetProps) => {
     if (!e.dataTransfer) return;
 
     const strData = e.dataTransfer.getData('text');
-    const data = JSON.parse(strData) as CreatingRelation | Variable;
+    const data = JSON.parse(strData) as Relation | Variable;
     props.onAreaDrop([], data);
   };
 
@@ -73,12 +73,14 @@ const DragTarget = (props: DragTargetProps) => {
                 onDragStart: handleDragStart
               })}
             >
-              <DragTarget
-                class="min-w-6 min-h-6 rounded"
-                onAreaDrop={(path, data) => props.onAreaDrop(['first', ...path], data)}
-                registerClearPath={(path) => props.registerClearPath(['first', ...path])}
-                data={props.data?.first ?? null}
-              />
+              {!singleSlotRelations.includes(props.data.type) && (
+                <DragTarget
+                  class="min-w-6 min-h-6 rounded"
+                  onAreaDrop={(path, data) => props.onAreaDrop(['first', ...path], data)}
+                  registerClearPath={(path) => props.registerClearPath(['first', ...path])}
+                  data={props.data?.first ?? null}
+                />
+              )}
               {props.data?.type}
               <DragTarget
                 class="min-w-6 min-h-6 rounded"

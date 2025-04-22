@@ -1,5 +1,5 @@
 import { Relation, RelationType, Variable } from '@/types/relations';
-import { MoveRight } from 'lucide-solid';
+import { MoveHorizontal, MoveRight } from 'lucide-solid';
 import { createMemo, createSignal, JSX } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 
@@ -73,7 +73,9 @@ const RelationEl = (props: RelationElProps) => {
   const icons: Record<RelationType, JSX.Element> = {
     and: <And />,
     or: <Or />,
-    if: <MoveRight class="mx-2" />
+    if: <MoveRight class="mx-2" />,
+    iff: <MoveHorizontal class="mx-2" />,
+    not: <span class="font-semibold text-xl mx-2">~</span>
   };
 
   if (props.rel.type === 'var') {
@@ -88,9 +90,9 @@ const RelationEl = (props: RelationElProps) => {
         props.conclusion ? 'bg-red-200' : props.defined && 'bg-blue-200/60'
       )}
     >
-      <RelationEl rel={props.rel.first} />
+      {props.rel.first && <RelationEl rel={props.rel.first} />}
       {icons[props.rel.type]}
-      <RelationEl rel={props.rel.last} />
+      {props.rel.last && <RelationEl rel={props.rel.last} />}
     </div>
   );
 };
