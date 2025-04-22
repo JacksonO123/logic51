@@ -12,5 +12,10 @@ export const logic: Record<RelationType, (first: boolean, last: boolean) => bool
   if: (first, last) => {
     if (first && !last) return false;
     return true;
-  }
+  },
+  iff: (first, last) => {
+    if (first === last) return true;
+    return false;
+  },
+  not: (_, last) => !last
 };
