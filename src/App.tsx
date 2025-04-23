@@ -4,7 +4,7 @@ import Button from '@/components/button';
 import { ChangeEvent } from '@/types/input';
 import Table from '@/components/table';
 import { Relation, Variable } from './types/relations';
-import { logic } from './lib/utils';
+import { deepCopy, logic } from './lib/utils';
 import CreateExpression from './components/create-expression';
 
 const App = () => {
@@ -48,6 +48,8 @@ const App = () => {
       }
     }
   ]);
+  const [tempRelation, setTempRelation] = createSignal<Relation | null>(null);
+  const [showingCreate, setShowingCreate] = createSignal(false);
   const [hasConclusion, setHasConclusion] = createSignal(false);
   const [deconstructions, setDeconstructions] = createSignal<Record<number, Relation>>({});
   const [table, setTable] = createSignal<boolean[][]>([]);
@@ -188,6 +190,7 @@ const App = () => {
   });
 
   const addVariable = () => {
+    if (vars().includes(varName())) return;
     if (varName().length === 0) return;
     setVars([...vars(), varName()]);
     setVarName('');
@@ -216,8 +219,41 @@ const App = () => {
     }
   };
 
+  const handleEdit = (index: number) => {
+    setTempRelation(deepCopy(relations()[index], Number));
+    setShowingCreate(true);
+  };
+
+  const removeRelation = (index: number) => {
+    setRelations((prev) => {
+      prev.splice(index, 1);
+      return [...prev];
+    });
+  };
+
+  const isRelated = (rel: Relation, varName: string): boolean => {
+    if (rel.relatedVars.includes(varName)) return true;
+
+    let first = false;
+    let last = false;
+
+    if (rel.first && rel.first.type !== 'var') first = isRelated(rel.first, varName);
+    if (rel.last && rel.last?.type !== 'var') last = isRelated(rel.last, varName);
+
+    return first || last;
+  };
+
+  const removeVar = (index: number) => {
+    const v = vars()[index];
+    setRelations((prev) => prev.filter((rel) => !isRelated(rel, v)));
+    setVars((vars) => {
+      vars.splice(index, 1);
+      return [...vars];
+    });
+  };
+
   return (
-    <main class="p-4 flex flex-col gap-4">
+    <main class="p-4 flex flex-col gap-12">
       <div class="flex gap-2">
         <Input
           onInput={handleNameChange}
@@ -233,10 +269,17 @@ const App = () => {
         relations={allRelations()}
         numDefined={relations().length}
         hasConclusion={hasConclusion()}
+        editRelation={handleEdit}
+        removeRelation={removeRelation}
+        removeVar={removeVar}
       />
       <CreateExpression
         vars={vars()}
         onSubmit={handleSubmit}
+        relation={tempRelation()}
+        setRelation={(rel) => setTempRelation(rel)}
+        showing={showingCreate()}
+        setShowing={(showing) => setShowingCreate(showing)}
       />
     </main>
   );

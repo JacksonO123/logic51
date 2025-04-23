@@ -1,5 +1,5 @@
 import { ElementDragEvent, ElementDropEvent } from '@/types/events';
-import { Relation, PathType, singleSlotRelations, Variable } from '@/types/relations';
+import { Relation, PathType, singleSlotRelations, Variable, DragData } from '@/types/relations';
 import { createSignal, JSX, splitProps } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
@@ -7,9 +7,10 @@ import { dragging, getDraggingControls } from '@/contexts/dragging';
 
 type DragTargetProps = JSX.HTMLAttributes<HTMLDivElement> & {
   onAreaDrop: (path: PathType[], data: Relation | Variable) => void;
-  registerClearPath: (path: PathType[]) => void;
+  registerClearPath?: (path: PathType[]) => void;
   root?: boolean;
   data: Relation | Variable | null;
+  path: PathType[];
 };
 
 const DragTarget = (props: DragTargetProps) => {
@@ -24,16 +25,20 @@ const DragTarget = (props: DragTargetProps) => {
     if (!e.dataTransfer) return;
 
     const strData = e.dataTransfer.getData('text');
-    const data = JSON.parse(strData) as Relation | Variable;
-    props.onAreaDrop([], data);
+    const data = JSON.parse(strData) as DragData;
+    props.onAreaDrop([], data.relation);
   };
 
   const handleDragStart = (e: ElementDragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer || !props.data) return;
 
-    const str = JSON.stringify(props.data);
+    const dragData: DragData = {
+      fromPath: props.path,
+      relation: props.data
+    };
+    const str = JSON.stringify(dragData);
     e.dataTransfer.setData('text', str);
-    if (!props.root) props.registerClearPath([]);
+    if (!props.root) props.registerClearPath?.([]);
   };
 
   const handleDragEnter = () => setDraggingOver(true);
@@ -77,16 +82,18 @@ const DragTarget = (props: DragTargetProps) => {
                 <DragTarget
                   class="min-w-6 min-h-6 rounded"
                   onAreaDrop={(path, data) => props.onAreaDrop(['first', ...path], data)}
-                  registerClearPath={(path) => props.registerClearPath(['first', ...path])}
+                  registerClearPath={(path) => props.registerClearPath?.(['first', ...path])}
                   data={props.data?.first ?? null}
+                  path={[...props.path, 'first']}
                 />
               )}
               {props.data?.type}
               <DragTarget
                 class="min-w-6 min-h-6 rounded"
                 onAreaDrop={(path, data) => props.onAreaDrop(['last', ...path], data)}
-                registerClearPath={(path) => props.registerClearPath(['last', ...path])}
+                registerClearPath={(path) => props.registerClearPath?.(['last', ...path])}
                 data={props.data?.last ?? null}
+                path={[...props.path, 'last']}
               />
             </LogicWrapper>
           )}

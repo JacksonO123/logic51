@@ -1,26 +1,26 @@
 import { JSX, createEffect, createSignal, splitProps } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 
-type ExpandWidthProps = JSX.HTMLAttributes<HTMLDivElement> & {
+type ExpandHeightProps = JSX.HTMLAttributes<HTMLDivElement> & {
   expanded: boolean;
 };
 
-const ExpandWidth = (props: ExpandWidthProps) => {
+const ExpandHeight = (props: ExpandHeightProps) => {
   const [local, other] = splitProps(props, ['class']);
-  const [width, setWidth] = createSignal<number | null>(null);
+  const [height, setHeight] = createSignal<number | null>(null);
   const [ref, setRef] = createSignal<HTMLDivElement | null>(null);
 
   createEffect(() => {
     const el = ref();
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setWidth(rect.width);
+    setHeight(rect.height);
   });
 
   return (
     <div
       class={twMerge('overflow-hidden duration-150', local.class)}
-      style={{ width: `${width() === null ? 'auto' : props.expanded ? width() : 0}px` }}
+      style={{ height: `${height() === null ? 'auto' : props.expanded ? height() : 0}px` }}
       {...other}
     >
       <div ref={setRef}>{other.children}</div>
@@ -28,4 +28,4 @@ const ExpandWidth = (props: ExpandWidthProps) => {
   );
 };
 
-export default ExpandWidth;
+export default ExpandHeight;

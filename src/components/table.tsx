@@ -1,7 +1,9 @@
 import { Relation, RelationType, Variable } from '@/types/relations';
-import { MoveHorizontal, MoveRight } from 'lucide-solid';
+import { MoveHorizontal, MoveRight, Pencil, X } from 'lucide-solid';
 import { createMemo, createSignal, JSX } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
+import Button from './button';
+import { numBools } from '@/lib/utils';
 
 type ItemWrapperProps = {
   children: JSX.Element;
@@ -15,13 +17,16 @@ type ItemWrapperProps = {
   highlight?: boolean;
   onMouseOver?: () => void;
   onMouseLeave?: () => void;
+  showControls?: boolean;
+  onRemove?: () => void;
+  onEdit?: () => void;
 };
 
 const ItemWrapper = (props: ItemWrapperProps) => {
   return (
     <div
       class={twMerge(
-        'px-1 py-0.5 flex items-center cursor-default',
+        'px-1 py-0.5 flex items-center cursor-default relative',
         !props.noBorderBottom && `border-b ${props.dimBorder ? 'border-b-primary/25' : 'border-b-primary'}`,
         !props.noBorderRight && `border-r ${props.dimBorder ? 'border-r-primary/25' : 'border-r-primary'}`,
         props.first && 'pt-1',
@@ -40,6 +45,35 @@ const ItemWrapper = (props: ItemWrapperProps) => {
       >
         {props.children}
       </div>
+      {props.showControls && (props.onRemove || props.onEdit) && (
+        <div
+          class={twMerge(
+            'absolute top-0 left-[50%] translate-x-[-50%] translate-y-[-110%] rounded-full p-1 bg-background flex gap-1',
+            numBools([!!props.onRemove, !!props.onEdit]) > 1 && 'border'
+          )}
+        >
+          {props.onRemove && (
+            <Button
+              class="h-6 w-6 rounded-full !px-0.75 has-[>svg]:px-0"
+              onClick={() => props.onRemove?.()}
+              size="icon"
+              variant="outline"
+            >
+              <X />
+            </Button>
+          )}
+          {props.onEdit && (
+            <Button
+              class="h-6 w-6 rounded-full !px-0.75 has-[>svg]:px-0"
+              onClick={() => props.onEdit?.()}
+              size="icon"
+              variant="outline"
+            >
+              <Pencil />
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -78,7 +112,7 @@ const RelationEl = (props: RelationElProps) => {
     not: <span class="font-semibold text-xl mx-2">~</span>
   };
 
-  if (props.rel.type === 'var') {
+  if (props.rel && props.rel.type === 'var') {
     return <span class="leading-0 px-2">{props.rel.name}</span>;
   }
 
@@ -90,9 +124,13 @@ const RelationEl = (props: RelationElProps) => {
         props.conclusion ? 'bg-red-200' : props.defined && 'bg-blue-200/60'
       )}
     >
-      {props.rel.first && <RelationEl rel={props.rel.first} />}
-      {icons[props.rel.type]}
-      {props.rel.last && <RelationEl rel={props.rel.last} />}
+      {props.rel && (
+        <>
+          {props.rel.first && <RelationEl rel={props.rel.first} />}
+          {icons[props.rel.type]}
+          {props.rel.last && <RelationEl rel={props.rel.last} />}
+        </>
+      )}
     </div>
   );
 };
@@ -103,6 +141,9 @@ type TableProps = {
   relations: Relation[];
   numDefined: number;
   hasConclusion: boolean;
+  editRelation: (index: number) => void;
+  removeRelation: (index: number) => void;
+  removeVar: (index: number) => void;
 };
 
 const Table = (props: TableProps) => {
@@ -141,6 +182,8 @@ const Table = (props: TableProps) => {
           <ItemWrapper
             noBorderRight
             header
+            showControls
+            onRemove={() => props.removeVar(colIndex)}
           >
             {props.vars[colIndex]}
           </ItemWrapper>
@@ -166,6 +209,9 @@ const Table = (props: TableProps) => {
           <ItemWrapper
             noBorderRight
             header
+            showControls={relations().length - colIndex <= props.numDefined}
+            onEdit={() => props.editRelation(props.numDefined - (relations().length - colIndex))}
+            onRemove={() => props.removeRelation(props.numDefined - (relations().length - colIndex))}
           >
             <RelationEl
               rel={props.relations[colIndex]}
@@ -191,6 +237,7 @@ const Table = (props: TableProps) => {
           ))}
         </div>
       ))}
+      {props.table.length === 0 && <div class="px-2">Empty</div>}
     </div>
   );
 };

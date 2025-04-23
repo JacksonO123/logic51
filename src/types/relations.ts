@@ -22,3 +22,8 @@ export type Relation = {
   first?: Relation | Variable;
   last?: Relation | Variable;
 };
+
+export type DragData = {
+  fromPath: PathType[] | null;
+  relation: Relation | Variable;
+};

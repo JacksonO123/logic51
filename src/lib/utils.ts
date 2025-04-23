@@ -19,3 +19,22 @@ export const logic: Record<RelationType, (first: boolean, last: boolean) => bool
   },
   not: (_, last) => !last
 };
+
+export const deepCopy = <T>(obj: T, keyTransformation: (key: string) => any = (key) => key): T => {
+  if (Array.isArray(obj)) {
+    return obj.map((value) => deepCopy(value)) as T;
+  } else if (typeof obj === 'object' && obj !== null) {
+    const layer = { ...obj };
+
+    Object.entries(layer).forEach(([key, value]) => {
+      // @ts-ignore
+      layer[keyTransformation(key)] = deepCopy(value);
+    });
+
+    return layer;
+  }
+
+  return obj;
+};
+
+export const numBools = (bools: boolean[]) => bools.map(Number).reduce((acc, curr) => acc + curr, 0);

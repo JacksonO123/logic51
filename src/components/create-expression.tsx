@@ -1,7 +1,8 @@
-import { JSX, createSignal, splitProps } from 'solid-js';
+import { createSignal } from 'solid-js';
 import Button from './button';
-import { Check, Minus, Plus, X } from 'lucide-solid';
+import { Check, Minus, Plus, Trash } from 'lucide-solid';
 import {
+  DragData,
   DraggableType,
   PathType,
   Relation,
@@ -14,42 +15,21 @@ import { ElementDragEvent, ElementDropEvent } from '@/types/events';
 import DragTarget from './drag-target';
 import { LogicWrapper, VariableWrapper } from './item-wrapper';
 import DropArea from './drop-area';
-import { getDraggingControls } from '@/contexts/dragging';
+import { dragging, getDraggingControls } from '@/contexts/dragging';
 import { twMerge } from 'tailwind-merge';
-import ExpandWidth from './expand-width';
-
-const ClearButton = (props: Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'children'>) => {
-  const [local, other] = splitProps(props, ['class', 'onMouseEnter', 'onMouseLeave']);
-  const [hovering, setHovering] = createSignal(false);
-
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      class={twMerge(
-        'absolute left-0 top-0 translate-x-[-6px] translate-y-[-50%] h-6 p-1 px-0 has-[>svg]:px-1 rounded-full gap-0 overflow-hidden',
-        local.class
-      )}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-      {...other}
-    >
-      <X />
-      <ExpandWidth expanded={hovering()}>
-        <span class="text-sm">Clear</span>
-      </ExpandWidth>
-    </Button>
-  );
-};
+import ClearButton from './clear-button';
+import ExpandHeight from './expand-height';
 
 type CreateExpressionProps = {
   vars: string[];
+  relation: Relation | null;
+  showing: boolean;
+  setShowing: (showing: boolean) => void;
   onSubmit: (rel: Relation, isConclusion: boolean) => void;
+  setRelation: (rel: Relation | null) => void;
 };
 
 const CreateExpression = (props: CreateExpressionProps) => {
-  const [showing, setShowing] = createSignal(false);
-  const [relation, setRelation] = createSignal<Relation | null>(null);
   const [isConclusion, setIsConclusion] = createSignal(false);
   let dropEvent: (() => void) | null = null;
 
@@ -72,7 +52,11 @@ const CreateExpression = (props: CreateExpressionProps) => {
       };
     }
 
-    const str = JSON.stringify(data);
+    const dragData: DragData = {
+      fromPath: null,
+      relation: data
+    };
+    const str = JSON.stringify(dragData);
     e.dataTransfer.setData('text', str);
   };
 
@@ -83,19 +67,19 @@ const CreateExpression = (props: CreateExpressionProps) => {
 
     if (path.length === 0) {
       if (!data) {
-        setRelation(null);
+        props.setRelation(null);
         return;
       }
 
       if (data.type === 'var') return;
 
-      setRelation(data);
+      props.setRelation(data);
       return;
     }
 
-    const lastPath = path.splice(path.length - 1, path.length)[0];
+    const lastPath = path.splice(path.length - 1)[0];
 
-    let obj = relation();
+    let obj = props.relation;
     if (obj === null) return;
     const orig = obj;
 
@@ -105,6 +89,8 @@ const CreateExpression = (props: CreateExpressionProps) => {
 
     if (!data) {
       obj[lastPath] = undefined;
+      props.setRelation({ ...orig });
+
       return;
     }
 
@@ -117,7 +103,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
       obj[lastPath] = data;
     }
 
-    setRelation({ ...orig });
+    props.setRelation({ ...orig });
   };
 
   const registerClearPath = (path: PathType[]) => {
@@ -129,14 +115,14 @@ const CreateExpression = (props: CreateExpressionProps) => {
   const surround = (e: ElementDropEvent<HTMLDivElement>, pos: PathType, blockType: RelationType) => {
     if (!e.dataTransfer) return;
 
-    const obj = JSON.parse(e.dataTransfer.getData('text')) as Relation | Variable;
+    const obj = JSON.parse(e.dataTransfer.getData('text')) as DragData;
     const res: Relation = {
       relatedVars: [],
       relatedIds: [],
       type: blockType,
-      [pos]: obj
+      [pos]: obj.relation
     };
-    setRelation(res);
+    props.setRelation(res);
   };
 
   const scanExpr = (rel: Relation | Variable): boolean => {
@@ -151,7 +137,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
   };
 
   const ableToCreate = () => {
-    const rel = relation();
+    const rel = props.relation;
     if (!rel) return false;
     return scanExpr(rel);
   };
@@ -171,17 +157,30 @@ const CreateExpression = (props: CreateExpressionProps) => {
   };
 
   const createExpression = () => {
-    const rel = relation() as Relation;
+    const rel = props.relation as Relation;
     if (!rel) return;
     propagateRelatedVars(rel);
     props.onSubmit(rel, isConclusion());
-    setRelation(null);
-    setShowing(false);
+    props.setRelation(null);
+    props.setShowing(false);
+  };
+
+  const trashDrop = (e: ElementDropEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!e.dataTransfer) return;
+
+    const value = e.dataTransfer.getData('text');
+    const dragData = JSON.parse(value) as DragData;
+    if (!dragData.fromPath) return;
+
+    console.log(dragData.fromPath);
+    handleDrop(dragData.fromPath, null);
   };
 
   return (
     <div id="wrapper">
-      {showing() ? (
+      {props.showing ? (
         <div class="fixed right-4 top-4 rounded-md border bg-background/50 backdrop-blur-sm min-w-[200px]">
           <div class="relative flex flex-col items-end gap-4 p-2">
             <div class="flex gap-2">
@@ -216,41 +215,71 @@ const CreateExpression = (props: CreateExpressionProps) => {
               class="w-full min-h-[35px] p-3 rounded-md relative"
               onAreaDrop={handleDrop}
               registerClearPath={registerClearPath}
-              data={relation()}
+              data={props.relation}
+              path={[]}
               root
             >
-              <ClearButton onClick={() => setRelation(null)} />
+              <ClearButton onClick={() => props.setRelation(null)}>Clear</ClearButton>
             </DragTarget>
-            <div class="w-full flex justify-start px-1 gap-2 items-center">
-              <button
-                class={twMerge(
-                  'w-4 h-4 border flex justify-center items-center rounded border-black cursor-pointer duration-150',
-                  isConclusion() ? 'bg-black border-black' : 'bg-background'
-                )}
-                onClick={() => setIsConclusion((prev) => !prev)}
+            <div class="flex w-full">
+              <ExpandHeight
+                class={twMerge('w-full', dragging() && 'pb-4')}
+                expanded={dragging()}
               >
-                <Check
-                  size={12}
-                  strokeWidth={4}
-                  stroke="white"
-                />
-              </button>
-              <label for="conclusion">Is conclusion</label>
+                <DragTarget
+                  class="w-[80px] h-[35px] rounded-md bg-destructive/15 border-2 border-dashed !border-destructive/20 flex justify-center items-center"
+                  onDrop={trashDrop}
+                  onAreaDrop={() => {}}
+                  data={null}
+                  path={[]}
+                >
+                  <div class="flex gap-1">
+                    <Trash
+                      size={18}
+                      class="stroke-foreground"
+                    />
+                    <span class="text-sm">Trash</span>
+                  </div>
+                </DragTarget>
+              </ExpandHeight>
+              <div class="w-full flex flex-col items-end gap-2">
+                <div class="flex px-1 gap-2 items-center">
+                  <button
+                    class={twMerge(
+                      'w-4 h-4 border flex justify-center items-center rounded border-black cursor-pointer duration-150',
+                      isConclusion() ? 'bg-black border-black' : 'bg-background'
+                    )}
+                    onClick={() => setIsConclusion((prev) => !prev)}
+                  >
+                    <Check
+                      size={12}
+                      strokeWidth={4}
+                      stroke="white"
+                    />
+                  </button>
+                  <label
+                    class="whitespace-normal text-nowrap break-keep"
+                    for="conclusion"
+                  >
+                    Is conclusion
+                  </label>
+                </div>
+                <Button
+                  onClick={createExpression}
+                  class="w-fit"
+                  disabled={!ableToCreate()}
+                >
+                  <Plus />
+                  Create
+                </Button>
+              </div>
             </div>
-            <Button
-              onClick={createExpression}
-              class="w-fit"
-              disabled={!ableToCreate()}
-            >
-              <Plus />
-              Create
-            </Button>
 
             <Button
               class="rounded-full absolute bottom-0 left-0 translate-x-[-60%] translate-y-[60%]"
               size="icon"
               variant="outline"
-              onClick={() => setShowing(false)}
+              onClick={() => props.setShowing(false)}
             >
               <Minus />
             </Button>
@@ -260,7 +289,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
         <Button
           class="rounded-full fixed right-4 top-4"
           size="icon"
-          onClick={() => setShowing(true)}
+          onClick={() => props.setShowing(true)}
         >
           <Plus />
         </Button>
