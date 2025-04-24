@@ -1,5 +1,5 @@
 import { Relation, RelationType, Variable } from '@/types/relations';
-import { MoveHorizontal, MoveRight, Pencil, X } from 'lucide-solid';
+import { Copy, MoveHorizontal, MoveRight, Pencil, X } from 'lucide-solid';
 import { createMemo, createSignal, JSX } from 'solid-js';
 import { twMerge } from 'tailwind-merge';
 import Button from './button';
@@ -20,6 +20,7 @@ type ItemWrapperProps = {
   showControls?: boolean;
   onRemove?: () => void;
   onEdit?: () => void;
+  onCopy?: () => void;
 };
 
 const ItemWrapper = (props: ItemWrapperProps) => {
@@ -70,6 +71,16 @@ const ItemWrapper = (props: ItemWrapperProps) => {
               variant="outline"
             >
               <Pencil />
+            </Button>
+          )}
+          {props.onCopy && (
+            <Button
+              class="h-6 w-6 rounded-full !px-0.75 has-[>svg]:px-0"
+              onClick={() => props.onCopy?.()}
+              size="icon"
+              variant="outline"
+            >
+              <Copy />
             </Button>
           )}
         </div>
@@ -144,6 +155,7 @@ type TableProps = {
   editRelation: (index: number) => void;
   removeRelation: (index: number) => void;
   removeVar: (index: number) => void;
+  copyRelation: (index: number) => void;
 };
 
 const Table = (props: TableProps) => {
@@ -173,6 +185,10 @@ const Table = (props: TableProps) => {
     if (relatedIds.includes(rel.deconId)) return true;
 
     return false;
+  };
+
+  const relativeRelationIndex = (index: number) => {
+    return props.numDefined - (relations().length - index);
   };
 
   return (
@@ -210,8 +226,9 @@ const Table = (props: TableProps) => {
             noBorderRight
             header
             showControls={relations().length - colIndex <= props.numDefined}
-            onEdit={() => props.editRelation(props.numDefined - (relations().length - colIndex))}
-            onRemove={() => props.removeRelation(props.numDefined - (relations().length - colIndex))}
+            onEdit={() => props.editRelation(relativeRelationIndex(colIndex))}
+            onRemove={() => props.removeRelation(relativeRelationIndex(colIndex))}
+            onCopy={() => props.copyRelation(relativeRelationIndex(colIndex))}
           >
             <RelationEl
               rel={props.relations[colIndex]}

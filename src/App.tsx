@@ -242,7 +242,7 @@ const App = () => {
 
   const handleEdit = (index: number) => {
     setEditIndex(index);
-    setTempRelation(deepCopy(relations()[index], Number));
+    setTempRelation(deepCopy(relations()[index]));
     setShowingCreate(true);
   };
 
@@ -280,6 +280,10 @@ const App = () => {
     setShowingCreate(showing);
   };
 
+  const copyRelation = (index: number) => {
+    setTempRelation(deepCopy(relations()[index]));
+  };
+
   return (
     <main class="p-4 flex flex-col gap-12">
       <div class="flex gap-2">
@@ -300,6 +304,7 @@ const App = () => {
         editRelation={handleEdit}
         removeRelation={removeRelation}
         removeVar={removeVar}
+        copyRelation={copyRelation}
       />
       <CreateExpression
         vars={vars()}
