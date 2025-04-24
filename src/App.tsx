@@ -48,18 +48,24 @@ const App = () => {
       }
     }
   ]);
+
   const [tempRelation, setTempRelation] = createSignal<Relation | null>(null);
   const [showingCreate, setShowingCreate] = createSignal(false);
   const [hasConclusion, setHasConclusion] = createSignal(false);
   const [deconstructions, setDeconstructions] = createSignal<Record<number, Relation>>({});
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal('');
+  const [editIndex, setEditIndex] = createSignal<number | null>(null);
+
+  let deconId = 0;
+
+  const isEditing = () => editIndex() !== null;
+
   const allRelations = () =>
     Object.entries(deconstructions())
       .sort((a, b) => +a[0] - +b[0])
       .map((item) => item[1])
       .concat(...relations());
-  let deconId = 0;
 
   const handleNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.currentTarget.value.slice(0, 1);
@@ -196,12 +202,25 @@ const App = () => {
     setVarName('');
   };
 
-  const handleSubmit = (rel: Relation, conclusion: boolean) => {
+  const handleSubmit = (conclusion: boolean) => {
+    const rel = tempRelation();
+    if (!rel) return;
+
     const prevHasConclusion = hasConclusion();
     if (conclusion) setHasConclusion(conclusion);
 
     if (!prevHasConclusion) {
-      setRelations((prev) => [...prev, rel]);
+      setRelations((prev) => {
+        const index = editIndex();
+
+        if (index !== null) {
+          prev[index] = rel;
+        } else {
+          return [...prev, rel];
+        }
+
+        return [...prev];
+      });
       return;
     }
 
@@ -217,9 +236,12 @@ const App = () => {
         return [...prev];
       });
     }
+
+    setTempRelation(null);
   };
 
   const handleEdit = (index: number) => {
+    setEditIndex(index);
     setTempRelation(deepCopy(relations()[index], Number));
     setShowingCreate(true);
   };
@@ -250,6 +272,12 @@ const App = () => {
       vars.splice(index, 1);
       return [...vars];
     });
+    setTempRelation(null);
+  };
+
+  const handleSetShowing = (showing: boolean) => {
+    if (!showing && isEditing()) setEditIndex(null);
+    setShowingCreate(showing);
   };
 
   return (
@@ -279,7 +307,10 @@ const App = () => {
         relation={tempRelation()}
         setRelation={(rel) => setTempRelation(rel)}
         showing={showingCreate()}
-        setShowing={(showing) => setShowingCreate(showing)}
+        setShowing={handleSetShowing}
+        editIndex={editIndex()}
+        hasConclusion={hasConclusion()}
+        numRelations={relations().length}
       />
     </main>
   );

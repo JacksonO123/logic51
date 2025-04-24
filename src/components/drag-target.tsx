@@ -26,6 +26,9 @@ const DragTarget = (props: DragTargetProps) => {
 
     const strData = e.dataTransfer.getData('text');
     const data = JSON.parse(strData) as DragData;
+
+    if (data.fromPath && data.fromPath.length < props.path.length) return;
+
     props.onAreaDrop([], data.relation);
   };
 

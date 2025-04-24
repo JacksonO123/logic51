@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createEffect, createSignal } from 'solid-js';
 import Button from './button';
 import { Check, Minus, Plus, Trash } from 'lucide-solid';
 import {
@@ -24,14 +24,18 @@ type CreateExpressionProps = {
   vars: string[];
   relation: Relation | null;
   showing: boolean;
+  editIndex: number | null;
   setShowing: (showing: boolean) => void;
-  onSubmit: (rel: Relation, isConclusion: boolean) => void;
+  onSubmit: (isConclusion: boolean) => void;
   setRelation: (rel: Relation | null) => void;
+  hasConclusion: boolean;
+  numRelations: number;
 };
 
 const CreateExpression = (props: CreateExpressionProps) => {
   const [isConclusion, setIsConclusion] = createSignal(false);
   let dropEvent: (() => void) | null = null;
+  const isEditing = () => props.editIndex !== null;
 
   const setDragging = (e: ElementDragEvent<HTMLDivElement>, blockType: DraggableType) => {
     if (!e.dataTransfer) return;
@@ -160,7 +164,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
     const rel = props.relation as Relation;
     if (!rel) return;
     propagateRelatedVars(rel);
-    props.onSubmit(rel, isConclusion());
+    props.onSubmit(isConclusion());
     props.setRelation(null);
     props.setShowing(false);
   };
@@ -177,6 +181,21 @@ const CreateExpression = (props: CreateExpressionProps) => {
     console.log(dragData.fromPath);
     handleDrop(dragData.fromPath, null);
   };
+
+  const toggleIsConclusion = () => {
+    if (!isEditing()) setIsConclusion((prev) => !prev);
+  };
+
+  const handleClose = () => {
+    if (isEditing()) props.setRelation(null);
+    props.setShowing(false);
+  };
+
+  createEffect(() => {
+    if (isEditing()) {
+      setIsConclusion(props.hasConclusion ? props.editIndex === props.numRelations - 1 : false);
+    }
+  });
 
   return (
     <div id="wrapper">
@@ -212,7 +231,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
               ))}
             </div>
             <DragTarget
-              class="w-full min-h-[35px] p-3 rounded-md relative"
+              class="w-full min-h-[45px] p-3 rounded-md relative"
               onAreaDrop={handleDrop}
               registerClearPath={registerClearPath}
               data={props.relation}
@@ -227,7 +246,10 @@ const CreateExpression = (props: CreateExpressionProps) => {
                 expanded={dragging()}
               >
                 <DragTarget
-                  class="w-[80px] h-[35px] rounded-md bg-destructive/15 border-2 border-dashed !border-destructive/20 flex justify-center items-center"
+                  class={twMerge(
+                    'w-[80px] h-[35px] rounded-md bg-destructive/15 border-2 border-dashed !border-destructive/20 flex justify-center items-center',
+                    dragging() ? 'opacity-100' : 'opacity-0'
+                  )}
                   onDrop={trashDrop}
                   onAreaDrop={() => {}}
                   data={null}
@@ -249,7 +271,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
                       'w-4 h-4 border flex justify-center items-center rounded border-black cursor-pointer duration-150',
                       isConclusion() ? 'bg-black border-black' : 'bg-background'
                     )}
-                    onClick={() => setIsConclusion((prev) => !prev)}
+                    onClick={toggleIsConclusion}
                   >
                     <Check
                       size={12}
@@ -270,7 +292,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
                   disabled={!ableToCreate()}
                 >
                   <Plus />
-                  Create
+                  {isEditing() ? 'Submit' : 'Create'}
                 </Button>
               </div>
             </div>
@@ -279,7 +301,7 @@ const CreateExpression = (props: CreateExpressionProps) => {
               class="rounded-full absolute bottom-0 left-0 translate-x-[-60%] translate-y-[60%]"
               size="icon"
               variant="outline"
-              onClick={() => props.setShowing(false)}
+              onClick={handleClose}
             >
               <Minus />
             </Button>

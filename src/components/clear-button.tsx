@@ -14,7 +14,8 @@ const ClearButton = (props: JSX.HTMLAttributes<HTMLButtonElement>) => {
       variant="outline"
       class={twMerge(
         'absolute left-0 top-0 translate-x-[-6px] translate-y-[-50%] h-6 p-1 !px-0.75 rounded-full gap-0 overflow-hidden has-[>svg]:px-0 duration-150',
-        local.class
+        local.class,
+        hovering() && '!pr-1.25'
       )}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}

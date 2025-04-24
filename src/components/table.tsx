@@ -121,7 +121,7 @@ const RelationEl = (props: RelationElProps) => {
       class={twMerge(
         'flex items-center rounded p-1',
         !props.root && 'border border-primary my-[-1px]',
-        props.conclusion ? 'bg-red-200' : props.defined && 'bg-blue-200/60'
+        props.conclusion ? 'bg-purple-400/30' : props.defined && 'bg-blue-300/60'
       )}
     >
       {props.rel && (
