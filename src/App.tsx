@@ -215,24 +215,52 @@ const App = () => {
 
         if (index !== null) {
           prev[index] = rel;
+
+          if (conclusion) {
+            const temp = prev[index];
+            prev[index] = prev[prev.length - 1];
+            prev[prev.length - 1] = temp;
+          }
         } else {
           return [...prev, rel];
         }
 
         return [...prev];
       });
+
       return;
     }
 
-    if (conclusion) {
-      setRelations((prev) => {
-        prev[prev.length - 1] = rel;
-        return [...prev];
-      });
+    const index = editIndex();
+
+    if (index !== null) {
+      if (conclusion) {
+        setRelations((prev) => {
+          prev[index] = rel;
+          const temp = prev[index];
+          prev[index] = prev[prev.length - 1];
+          prev[prev.length - 1] = temp;
+          return [...prev];
+        });
+      } else {
+        setRelations((prev) => {
+          prev[index] = rel;
+          return [...prev];
+        });
+
+        if (index === relations().length - 1) {
+          setHasConclusion(false);
+        }
+      }
     } else {
       setRelations((prev) => {
-        const last = prev.splice(prev.length - 1)[0];
-        prev.push(rel, last);
+        if (!hasConclusion()) {
+          prev.push(rel);
+        } else {
+          const last = prev.splice(prev.length - 1)[0];
+          prev.push(rel, last);
+        }
+
         return [...prev];
       });
     }
@@ -247,6 +275,11 @@ const App = () => {
   };
 
   const removeRelation = (index: number) => {
+    const editIdx = editIndex();
+    if (editIdx && index < editIdx) {
+      setEditIndex((prev) => (prev !== null ? prev - 1 : prev));
+    }
+
     setRelations((prev) => {
       prev.splice(index, 1);
       return [...prev];
@@ -282,6 +315,7 @@ const App = () => {
 
   const copyRelation = (index: number) => {
     setTempRelation(deepCopy(relations()[index]));
+    setShowingCreate(true);
   };
 
   return (

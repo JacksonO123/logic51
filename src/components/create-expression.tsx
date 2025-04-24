@@ -37,6 +37,14 @@ const CreateExpression = (props: CreateExpressionProps) => {
   let dropEvent: (() => void) | null = null;
   const isEditing = () => props.editIndex !== null;
 
+  createEffect(() => {
+    if (!props.showing) setIsConclusion(false);
+  });
+
+  createEffect(() => {
+    setIsConclusion(props.hasConclusion && props.editIndex === props.numRelations - 1);
+  });
+
   const setDragging = (e: ElementDragEvent<HTMLDivElement>, blockType: DraggableType) => {
     if (!e.dataTransfer) return;
 
@@ -183,19 +191,13 @@ const CreateExpression = (props: CreateExpressionProps) => {
   };
 
   const toggleIsConclusion = () => {
-    if (!isEditing()) setIsConclusion((prev) => !prev);
+    setIsConclusion((prev) => !prev);
   };
 
   const handleClose = () => {
     if (isEditing()) props.setRelation(null);
     props.setShowing(false);
   };
-
-  createEffect(() => {
-    if (isEditing()) {
-      setIsConclusion(props.hasConclusion ? props.editIndex === props.numRelations - 1 : false);
-    }
-  });
 
   return (
     <div id="wrapper">
