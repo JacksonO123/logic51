@@ -307,6 +307,12 @@ const CreateExpression = (props: CreateExpressionProps) => {
             >
               <Minus />
             </Button>
+
+            {isEditing() && (
+              <div class="absolute rounded-full bottom-0 left-0 translate-y-[50%] translate-x-[2rem] bg-yellow-100 px-2 border border-yellow-600 text-yellow-700">
+                Editing
+              </div>
+            )}
           </div>
         </div>
       ) : (
