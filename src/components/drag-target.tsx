@@ -83,7 +83,7 @@ const DragTarget = (props: DragTargetProps) => {
             >
               {!singleSlotRelations.includes(props.data.type) && (
                 <DragTarget
-                  class="min-w-6 min-h-6 rounded"
+                  class={twMerge('min-h-8 rounded', props.data.first !== undefined ? 'min-w-6' : 'min-w-8')}
                   onAreaDrop={(path, data) => props.onAreaDrop(['first', ...path], data)}
                   registerClearPath={(path) => props.registerClearPath?.(['first', ...path])}
                   data={props.data?.first ?? null}
@@ -92,7 +92,7 @@ const DragTarget = (props: DragTargetProps) => {
               )}
               {props.data?.type}
               <DragTarget
-                class="min-w-6 min-h-6 rounded"
+                class={twMerge('min-h-8 rounded', props.data.last !== undefined ? 'min-w-6' : 'min-w-8')}
                 onAreaDrop={(path, data) => props.onAreaDrop(['last', ...path], data)}
                 registerClearPath={(path) => props.registerClearPath?.(['last', ...path])}
                 data={props.data?.last ?? null}

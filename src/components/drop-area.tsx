@@ -8,8 +8,8 @@ const DropArea = (props: JSX.HTMLAttributes<HTMLDivElement>) => {
   return (
     <div
       class={twMerge(
-        'w-6 h-6 rounded border-2 border-black/20 border-dashed duration-150',
-        dragging() && 'border-white'
+        'w-8 h-8 rounded border-2 border-black/20 border-dashed duration-150',
+        dragging() && 'border-white hover:bg-white/50'
       )}
       onDragOver={(e) => e.preventDefault()}
       {...other}
