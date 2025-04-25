@@ -240,6 +240,7 @@ const App = () => {
           const temp = prev[index];
           prev[index] = prev[prev.length - 1];
           prev[prev.length - 1] = temp;
+
           return [...prev];
         });
       } else {
@@ -280,6 +281,10 @@ const App = () => {
       setEditIndex((prev) => (prev !== null ? prev - 1 : prev));
     }
 
+    if (index == relations().length - 1) {
+      setHasConclusion(false);
+    }
+
     setRelations((prev) => {
       prev.splice(index, 1);
       return [...prev];
@@ -300,11 +305,18 @@ const App = () => {
 
   const removeVar = (index: number) => {
     const v = vars()[index];
+
+    const rels = relations();
+    if (rels.length > 0 && hasConclusion() && isRelated(rels[rels.length - 1], v)) {
+      setHasConclusion(false);
+    }
+
     setRelations((prev) => prev.filter((rel) => !isRelated(rel, v)));
     setVars((vars) => {
       vars.splice(index, 1);
       return [...vars];
     });
+
     setTempRelation(null);
   };
 
