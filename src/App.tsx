@@ -56,6 +56,7 @@ const App = () => {
   const [table, setTable] = createSignal<boolean[][]>([]);
   const [varName, setVarName] = createSignal('');
   const [editIndex, setEditIndex] = createSignal<number | null>(null);
+  const [criticalRows, setCriticalRows] = createSignal<number[]>([]);
 
   let deconId = 0;
 
@@ -94,9 +95,9 @@ const App = () => {
     return logic[rel.type](first, last);
   };
 
-  const fillTable = (vars: string[], relations: Relation[]) => {
+  const fillTable = (vars: string[], rels: Relation[]) => {
     const numRows = Math.pow(2, vars.length);
-    const table: boolean[][] = Array(relations.length + vars.length)
+    const table: boolean[][] = Array(rels.length + vars.length)
       .fill(null)
       .map(() => Array(numRows).fill(false));
 
@@ -116,10 +117,29 @@ const App = () => {
     }
 
     for (let i = 0; i < numRows; i++) {
-      for (let j = 0; j < relations.length; j++) {
-        table[vars.length + j][i] = evaluateRelation(relations[j], table, i);
+      for (let j = 0; j < rels.length; j++) {
+        table[vars.length + j][i] = evaluateRelation(rels[j], table, i);
       }
     }
+
+    if (hasConclusion()) {
+      let tempCritRows: number[] = [];
+      for (let i = 0; i < numRows; i++) {
+        let isCritical = true;
+
+        const start = rels.length - relations().length;
+        const end = rels.length - 1;
+        if (start === end) continue;
+
+        for (let j = start; j < end; j++) {
+          isCritical = isCritical && table[j + vars.length][i];
+        }
+
+        if (isCritical) tempCritRows.push(i);
+      }
+
+      setCriticalRows(tempCritRows);
+    } else setCriticalRows([]);
 
     setTable(table);
   };
@@ -351,6 +371,7 @@ const App = () => {
         removeRelation={removeRelation}
         removeVar={removeVar}
         copyRelation={copyRelation}
+        criticalRows={criticalRows()}
       />
       <CreateExpression
         vars={vars()}

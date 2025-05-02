@@ -15,9 +15,10 @@ type ItemWrapperProps = {
   last?: boolean;
   header?: boolean;
   highlight?: boolean;
+  showControls?: boolean;
+  isCritical?: boolean;
   onMouseOver?: () => void;
   onMouseLeave?: () => void;
-  showControls?: boolean;
   onRemove?: () => void;
   onEdit?: () => void;
   onCopy?: () => void;
@@ -41,7 +42,8 @@ const ItemWrapper = (props: ItemWrapperProps) => {
         class={twMerge(
           'px-3 py-1 rounded w-full text-center border-2 border-transparent duration-75',
           props.value === undefined ? '' : props.value ? 'bg-green-500/25' : 'bg-destructive/25',
-          props.highlight && 'border-blue-500'
+          props.highlight && 'border-blue-500',
+          props.isCritical && 'bg-amber-400/45'
         )}
       >
         {props.children}
@@ -152,6 +154,7 @@ type TableProps = {
   relations: Relation[];
   numDefined: number;
   hasConclusion: boolean;
+  criticalRows: number[];
   editRelation: (index: number) => void;
   removeRelation: (index: number) => void;
   removeVar: (index: number) => void;
@@ -248,6 +251,12 @@ const Table = (props: TableProps) => {
               onMouseOver={() => handleHover(colIndex, index)}
               onMouseLeave={cancelHover}
               highlight={isMapped(colIndex, index)}
+              isCritical={
+                relations().length - colIndex <= props.numDefined &&
+                props.criticalRows.includes(index) &&
+                props.hasConclusion &&
+                colIndex !== relations().length - 1
+              }
             >
               {item ? 'T' : 'F'}
             </ItemWrapper>
